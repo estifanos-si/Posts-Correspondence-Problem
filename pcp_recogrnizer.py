@@ -6,14 +6,14 @@ import threading
 from concurrent.futures  import ThreadPoolExecutor
 
 '''
-    Given a Post Correspondence Problem instance, this class Searches for a match.
+    Given a Post Correspondence Problem instance, this class carries out a parallel search for a match.
 '''
 class pcp_recognizer:
-    def __init__(self, x:list,y:list):
+    def __init__(self, x:list,y:list,num_threads):
         self.match =[]
         self.mLock  = threading.Lock()
         self.x = x
-        self.executor = ThreadPoolExecutor(8)
+        self.executor = ThreadPoolExecutor(num_threads)
         self.done = False
         self.y = y
         self.futures = []
@@ -31,8 +31,6 @@ class pcp_recognizer:
         Such that x[i1]x[i2]...x[in] = y[i1]...y[in]
     '''
     def search(self,xs,ys,indexes):
-        assert(len(self.x) == len(self.y))     
-        
         if(self.done ):
             return
         if(self.isMatch(xs,ys)):
@@ -44,40 +42,37 @@ class pcp_recognizer:
                 nindex = indexes + [i]
                 try:
                     '''
-                        xs + self.x[i] ,  ys + self.y[i] is a partial match so might lead
+                        (xs + self.x[i] ,  ys + self.y[i] ) is a partial match so might lead
                         to a solution.
                         Schedule a search down this path
                     '''
                     f= self.executor.submit(self.search, xs + self.x[i],ys + self.y[i],nindex)
                     self.futures.append(f)
                 except:
+                    # executor possibly shutdown, because a match has been found.
                     break
 
     def setDone(self,indexes:list):
         self.mLock.acquire()
         self.match = indexes
         self.done = True
-        print("[*] Found Match : Match is ", self.match)
+        print("[*] Found A Match \n", self.match)
         self.executor.shutdown(wait=False)
-        for i in self.match:
-            print(self.x[i], end="")
-        print()
-        for i in self.match:
-            print(self.y[i], end="")
-        print()
         self.mLock.release()
 
 def main():
     # Read in the problem instance
     with open('pcp.config.json') as config_f:
         config = json.load(config_f)
-        x,y = config['x'],config['y']
+        x,y,num_threads = config['x'],config['y'],config['num_threads']
+        assert(len(x) == len(y))     
         print("[*] Searching for a match...")
+        print(f"[*] Using {num_threads} Threads...")
         print("{0:15s} {1}".format("[*] Input is : ", x))
         print(f"{str.rjust(str(y),16 + len(str(y)))}")
 
     #Start the search
-    p = pcp_recognizer(x,y)
+    p = pcp_recognizer(x,y,num_threads)
     p.search('','',[])
     
     while not p.done:
