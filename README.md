@@ -1,4 +1,4 @@
-# Post Correspondece Problem Recognizer
+# Post's Correspondece Problem Recognizer
 
 A threaded implementation of a recognizer for the Post Correspondence Problem.
 
